@@ -16,5 +16,6 @@
     - 'us-east1-docker.pkg.dev/tatvic-gcp-dev-team/cloud-run-source-deploy/slackpocimg:$COMMIT_SHA'
     - '--region'
     - 'us-east1'
+    - '--allow-unauthenticated'
   images:
   - 'us-east1-docker.pkg.dev/tatvic-gcp-dev-team/cloud-run-source-deploy/slackpocimg:$COMMIT_SHA'
