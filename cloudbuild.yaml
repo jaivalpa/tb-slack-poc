@@ -1,0 +1,20 @@
+  steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-east1-docker.pkg.dev/tatvic-gcp-dev-team/cloud-run-source-deploy/slackpocimg:$COMMIT_SHA', '.']
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/tatvic-gcp-dev-team/cloud-run-source-deploy/slackpocimg:$COMMIT_SHA']
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+    - 'run'
+    - 'deploy'
+    - 'trustbanckpoc'
+    - '--image'
+    - 'us-east1-docker.pkg.dev/tatvic-gcp-dev-team/cloud-run-source-deploy/slackpocimg:$COMMIT_SHA'
+    - '--region'
+    - 'us-east1'
+  images:
+  - 'us-east1-docker.pkg.dev/tatvic-gcp-dev-team/cloud-run-source-deploy/slackpocimg:$COMMIT_SHA'
