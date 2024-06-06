@@ -9,7 +9,7 @@ app = Flask(__name__)
 # Set up Google Cloud credentials and logging client
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/jaivalpatni/Documents/BQ Slack POC/tatvic-gcp-dev-team-d5df083fc125.json'
 logging_client = logging.Client(project="tatvic-gcp-dev-team")
-logger = logging_client.logger("trustbankpoc")
+logger = logging_client.logger(name="trustbankpoc")
 
 # Slack webhook URL
 slack_webhook_url = 'https://hooks.slack.com/services/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'
