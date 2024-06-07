@@ -3,3 +3,6 @@ google-cloud-bigquery
 google-cloud-logging
 pandas
 slack-sdk
+uvicorn
+fastapi
+db-dtypes

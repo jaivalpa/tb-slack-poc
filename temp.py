@@ -1,50 +1,54 @@
+from fastapi import FastAPI, HTTPException
 import os
 import pandas as pd
-from flask import Flask, jsonify
 from google.cloud import bigquery, logging
 from slack_sdk.webhook import WebhookClient
+import uvicorn
 
-app = Flask(__name__)
+app = FastAPI()
+
+# Set up environment variables
+project_id = os.getenv('PROJECT_ID')
+credentials_path = os.getenv('BQ_CREDENTIALS_PATH')
+slack_webhook_url = os.getenv('SLACK_WEBHOOK_URL')
 
 # Set up Google Cloud credentials and logging client
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/jaivalpatni/Documents/BQ Slack POC/tatvic-gcp-dev-team-d5df083fc125.json'
-logging_client = logging.Client(project="tatvic-gcp-dev-team")
-logger = logging_client.logger(name="trustbankpoc")
+if credentials_path:
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+else:
+    raise ValueError("Environment variable BQ_CREDENTIALS_PATH not set")
 
-# Slack webhook URL
-slack_webhook_url = 'https://hooks.slack.com/services/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'
+# logging_client = logging.Client()
+# logger = logging_client.logger(name="trustbankpoc")
+
+if not slack_webhook_url:
+    raise ValueError("Environment variable SLACK_WEBHOOK_URL not set")
+
 slack_webhook_client = WebhookClient(slack_webhook_url)
 
-@app.route('/runquery', methods=['POST'])
-def run_query():
-    query = "SELECT Ticket_ID FROM `tatvic-gcp-dev-team.freshwork_test.freshwork18` WHERE Created_By = 'CA00002328'"
+@app.post("/runquery")
+async def run_query():
+    query = f"SELECT Ticket_ID FROM `{project_id}.freshwork_test.freshwork18` WHERE Created_By = 'CA00002328'"
     bq_client = bigquery.Client()
-
     try:
         query_job = bq_client.query(query)
         results = query_job.result()
-
         df = results.to_dataframe()
         row_count = len(df)
-        logger.log_text(f'Query successful, retrieved {row_count} rows.')
-
+        print(f'Query successful, retrieved {row_count} rows.')
         if row_count == 0:
-            return jsonify({'message': 'No tickets found'}), 200
+            return {"message": "No tickets found"}
 
-        message = "Ticket_IDs are:\n" + "\n".join(f"Ticket_ID: {row['Ticket_ID']}" for _, row in df.iterrows())
+        message = " ".join(f"Ticket_ID: {row['Ticket_ID']}" for _, row in df.iterrows())
+        print(message)
 
-        # Send message to Slack
+        # # Send message to Slack
         slack_response = slack_webhook_client.send(text=message)
         if slack_response.status_code != 200:
-            raise Exception(f"Slack notification failed with status code {slack_response.status_code}")
+            raise HTTPException(status_code=500, detail=f"Slack notification failed with status code {slack_response.status_code}")
 
-        return jsonify({'message': 'Query successful, and Slack notification sent.'}), 200
+        return {"message": "Query successful, and Slack notification sent."}
 
     except Exception as e:
-        error_message = str(e)
-        logger.log_text(f'Query failed: {error_message}', severity='ERROR')
-        return jsonify({'error': error_message}), 500
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+        print(f'Query failed: {str(e)}', severity='ERROR')
+        raise HTTPException(status_code=500, detail=str(e))
